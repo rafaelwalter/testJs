@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+
+<html>
+    <body>
+        <script>
+        //    const ab2str = (buffer) => {
+        //         return String.fromCharCode.apply(null, new Uint16Array(buffer));
+        //     };
+
+        //     const str2ab = (string) => {
+        //         const buffer = new ArrayBuffer(string.length * 2); // 2 bytes for each char
+        //         const bufView = new Uint16Array(buffer);
+
+        //         for (let i = 0, strLen = string.length; i < strLen; i++) {
+        //             bufView[i] = string.charCodeAt(i);
+        //         }
+
+        //         return buffer;
+        //     };
+
+            const createWorkerUrl = (fn) => {
+                const resolveString = fn.toString();
+                const webWorkerTemplate = `
+                    self.addEventListener('message', function(e) {
+                        postMessage((${resolveString})(e.data));
+                    });
+                `;
+                const blob = new Blob([webWorkerTemplate], { type: 'text/javascript' });
+                return URL.createObjectURL(blob);
+            };
+
+            const createPromiseForWorker = (worker, data) => {
+                return new Promise((resolve, reject) => {
+                    worker.addEventListener('message', (event) => resolve(event.data));
+                    worker.addEventListener('error', reject);
+                    worker.postMessage(data);
+                });
+            };
+
+            const runUrl = (url, data) => {
+                const worker = new Worker(url);
+                return createPromiseForWorker(worker, data);
+            };
+
+            const fn = (input) => {
+                return `hello ${input}`;
+            };
+
+            const run = async () => {
+                console.time('worker');
+                const url = createWorkerUrl(fn);
+                const result = await runUrl(url, 'world');
+                console.timeEnd('worker');
+                console.log(result);
+            };
+
+            // const worker = new Worker('worker.js');
+
+            // worker.addEventListener('message', () => {
+            //     console.timeEnd('rounttrip');
+            // });
+
+            // const array = Array(100).fill(true).map(x => ({}));
+
+            // const run = () => {
+            //     console.time('rounttrip');
+            //     const data = str2ab(JSON.stringify(array));
+            //     worker.postMessage(data, [data]);
+            //     // worker.postMessage(array);
+            // };
+        </script>
+
+
+        <button onclick="run()" autofocus>RUN</button>
+    </body>
+</html>
